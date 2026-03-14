@@ -1,0 +1,17 @@
+{
+  "background_color": "#ffffff",
+  "dir": "ltr",
+  "display": "standalone",
+  "name": "Editor Braille Acessível",
+  "orientation": "any",
+  "scope": "/",
+  "short_name": "EBA-WEB",
+  "start_url": "/",
+  "theme_color": "#ffffff",
+  "id": "https://extraordinary-naiad-66fdc3.netlify.app/",
+  "description": "EBA-WEB (Editor Braille Acessível) é uma plataforma digital desenvolvida para facilitar a criação, edição e leitura de conteúdos em Braille de forma simples e acessível na web. O sistema permite que estudantes, professores e pessoas com deficiência visual escrevam, convertam e organizem textos em Braille diretamente no navegador, promovendo inclusão educacional e acesso igualitário à informação. Com uma interface intuitiva e adaptada às tecnologias assistivas, o EBA-WEB busca apoiar a aprendizagem, a produção de materiais acessíveis e a participação plena de pessoas cegas ou com baixa visão no ambiente académico e digital.",
+  "lang": "pt",
+  "categories": [
+    "education"
+  ]
+}

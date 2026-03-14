@@ -1,0 +1,575 @@
+<!doctype html>
+<html lang="pt">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Linha Braille 8 Pontos — EBA-WEB Editor Acessível</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<style>
+  :root{
+    --bg:#f3f7fb; --card:#ffffff; --accent:#0b63ff; --muted:#e7f0ff; --text:#06203a;
+  }
+  body{margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,Arial;background:var(--bg);color:var(--text);padding:12px}
+  header{display:flex;align-items:center;justify-content:space-between;gap:12px}
+  h1{font-size:1rem;margin:0}
+  .lead{font-size:.88rem;color:#334a66}
+  .grid{display:grid;grid-template-columns:1fr 360px;gap:14px;margin-top:12px}
+  @media(max-width:980px){ .grid{grid-template-columns:1fr} .rightcol{order:2} .leftcol{order:1} }
+  .card{background:var(--card);border-radius:12px;padding:12px;box-shadow:0 6px 18px rgba(10,30,60,.06)}
+  .controls{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  select,input[type=number]{padding:8px;border-radius:8px;border:1px solid #dde7f5;background:#fff}
+  button{padding:8px 10px;border-radius:8px;border:none;background:var(--accent);color:#fff;font-weight:700;cursor:pointer}
+  button.muted{background:#eef5ff;color:#08306a;border:1px solid #dcecff}
+  .kbd{display:inline-block;padding:6px 8px;border-radius:6px;background:var(--muted);font-weight:700}
+  .editor{min-height:260px;border-radius:10px;padding:12px;border:1px solid #e2eaf7;background:#fff;outline:none;overflow:auto;cursor:default}
+  .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .dot-row{display:flex;gap:8px;align-items:center;justify-content:center;margin-top:8px}
+  .dot-btn{width:58px;height:58px;border-radius:12px;border:1px solid #d7e6ff;background:#fff;font-weight:800;font-size:1rem;display:flex;flex-direction:column;align-items:center;justify-content:center;box-shadow:0 6px 16px rgba(10,40,120,.04)}
+  .dot-btn.active{background:linear-gradient(180deg,var(--accent),#0040c1);color:#fff;border-color:transparent;box-shadow:0 12px 30px rgba(11,99,255,.18)}
+  .big-actions{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}
+  .symbols{display:flex;gap:6px;flex-wrap:wrap}
+  .small{font-size:.85rem;color:#3b556f}
+  .status{margin-top:8px;font-size:.88rem;color:#234}
+  .rightcol .card{position:sticky;top:12px}
+  .footer-note{font-size:.82rem;color:#48627f;margin-top:10px}
+  @media(max-width:520px){ .dot-btn{width:48px;height:48px} button{padding:10px 12px} }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>EBA-WEB (Editor Braille Acessível Web)</h1>
+    <div class="lead">Use as teclas <span class="kbd">f d s</span> (pontos 1-2-3), <span class="kbd">j k l</span> (pontos 4-5-6), <span class="kbd">A</span> (ponto 7) / <span class="kbd">Z</span> (ponto 8) ou toque nos botões. Pressione G ou H para confirmar.</div>
+  </div>
+  <div class="small">Protótipo | Grade 8 Pontos (ASCII Braille)</div>
+</header>
+<div class="grid" role="main">
+  <div class="leftcol">
+    <div class="card" aria-label="Editor e formatação">
+      <div class="row" style="justify-content:space-between;align-items:center">
+        <div class="controls" aria-hidden="false">
+          <label class="small">Fonte:
+            <select id="fontSelect" aria-label="Selecionar tipo de letra">
+              <option value="Inter, system-ui, sans-serif">Inter (padrão)</option>
+              <option value="Arial, system-ui, sans-serif">Arial</option>
+              <option value="Courier New, monospace">Courier New</option>
+            </select>
+          </label>
+          <label class="small">Tamanho:
+            <input id="fontSize" type="number" min="10" max="36" value="14" style="width:78px">
+          </label>
+          <button id="boldBtn" class="muted" title="Negrito">B</button>
+          <button id="italicBtn" class="muted" title="Itálico">I</button>
+          <button id="underlineBtn" class="muted" title="Sublinhado">U</button>
+        </div>
+        <div>
+          <label class="small"><input type="checkbox" id="voiceToggle" checked> Usar Voz</label>
+          <button id="copyTxt" class="muted" title="Copiar texto">Copiar</button>
+          <button id="exportTxt" class="muted" title="Exportar txt">Exportar TXT</button>
+          <button id="exportPDF" class="muted" title="Gerar PDF">Gerar PDF</button>
+        </div>
+      </div>
+      <div style="margin-top:10px" aria-live="polite">
+        <div id="editor" class="editor" contenteditable="true" role="textbox" aria-multiline="true" aria-label="Editor de texto - área principal"></div>
+      </div>
+      <div class="status" id="status" aria-live="polite">Aguardando acorde...</div>
+    </div>
+    <div class="card" style="margin-top:12px" aria-label="Controles avançados">
+      <div class="small">Inserir símbolos / pontuação / acentos</div>
+      <div style="margin-top:8px" class="symbols" role="toolbar" aria-label="Símbolos">
+        <button class="muted" data-insert="," title="Vírgula">,</button>
+        <button class="muted" data-insert="." title="Ponto">.</button>
+        <button class="muted" data-insert=";" title="Ponto e vírgula">;</button>
+        <button class="muted" data-insert=":" title="Dois pontos">:</button>
+        <button class="muted" data-insert="?" title="Interrogação">?</button>
+        <button class="muted" data-insert="!" title="Exclamação">!</button>
+        <button class="muted" data-insert="—" title="Travessão">—</button>
+        <button class="muted" data-insert="+" title="Mais">+</button>
+        <button class="muted" data-insert="−" title="Menos">−</button>
+        <button class="muted" data-insert="=" title="Igual">=</button>
+        <button class="muted" data-insert="π" title="Pi">π</button>
+      </div>
+      <div style="margin-top:12px" class="small">Acentos: (aplica ao último carácter se existir)</div>
+      <div style="margin-top:8px" class="row">
+        <button class="muted" data-accent="acute">´ (agudo)</button>
+        <button class="muted" data-accent="grave">` (grave)</button>
+        <button class="muted" data-accent="tilde">~ (til)</button>
+        <label class="small" style="margin-left:8px"><input id="accentNext" type="checkbox"> Aplicar ao próximo carácter</label>
+      </div>
+      <div class="footer-note">Observação: acentos aplicam a letras latinas comuns.</div>
+    </div>
+  </div>
+  <div class="rightcol">
+    <div class="card" aria-label="Linha Braille — botões pontos">
+      <div class="small">Linha Braille — pontos 8 (toque para ligar/desligar)</div>
+      <div class="dot-row" style="margin-top:10px">
+        <button class="dot-btn" id="dot1" data-dot="1" aria-pressed="false">1 <small>(f)</small></button>
+        <button class="dot-btn" id="dot2" data-dot="2" aria-pressed="false">2 <small>(d)</small></button>
+        <button class="dot-btn" id="dot3" data-dot="3" aria-pressed="false">3 <small>(s)</small></button>
+        <button class="dot-btn" id="dot7" data-dot="7" aria-pressed="false">7 <small>(a)</small></button>
+      </div>
+      <div class="dot-row" style="margin-top:8px">
+        <button class="dot-btn" id="dot4" data-dot="4" aria-pressed="false">4 <small>(j)</small></button>
+        <button class="dot-btn" id="dot5" data-dot="5" aria-pressed="false">5 <small>(k)</small></button>
+        <button class="dot-btn" id="dot6" data-dot="6" aria-pressed="false">6 <small>(l)</small></button>
+        <button class="dot-btn" id="dot8" data-dot="8" aria-pressed="false">8 <small>(z)</small></button>
+      </div>
+      <div class="big-actions" style="margin-top:10px">
+        <button id="enterBtn" class="muted">G ou H (Enter)</button>
+        <button id="spaceBtn" class="muted">Space</button>
+        <button id="backBtn" class="muted">Backspace</button>
+        <button id="clearChordBtn" class="muted">Limpar Acorde</button>
+      </div>
+      <div class="status" id="chordDisplay" aria-live="polite" style="margin-top:10px">Acorde: —</div>
+      <div class="footer-note" style="margin-top:10px">Atalho teclado físico: <span class="kbd">s d f</span> / <span class="kbd">j k l</span> / <span class="kbd">a z</span> + <span class="kbd">G</span> ou <span class="kbd">H</span></div>
+    </div>
+    <div class="card" style="margin-top:12px">
+      <div class="small">Ajudas rápidas</div>
+      <ul>
+        <li class="small">Fazer acorde: toque nos pontos pretendidos (1 a 8) e prima G ou H para confirmar.</li>
+        <li class="small">Números: Utilize os pontos Braille para números (ex: 1 = P1+P8).</li>
+        <li class="small">Maiúsculas: Ponto 7 ativa modo maiúsculas para TODAS as letras. Desative com Ponto 7 novamente.</li>
+        <li class="small">Acentos: Utilize o sinal de acento Braille (ex: Ponto 4 para ´) antes da vogal.</li>
+        <li class="small">Botão direito do rato = apagar (como Backspace)</li>
+        <li class="small">1 clique esquerdo = exportar TXT (EBA_WEB_YYYY-MM-DD_HH-MM-SS.txt)</li>
+        <li class="small">2 cliques esquerdo = exportar PDF (EBA_WEB_YYYY-MM-DD_HH-MM-SS.pdf)</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script>
+(() => {
+  let capsMode = false;
+  let lastDeletedChar = '';
+  let clickCount = 0;
+  let clickTimer = null;
+  let deleteSpeakTimer = null;
+
+  const brailleMap8 = {
+    '10000000':'a','11000000':'b','10010000':'c','10011000':'d','10001000':'e',
+    '11010000':'f','11011000':'g','11001000':'h','01010000':'i','01011000':'j',
+    '10100000':'k','11100000':'l','10110000':'m','10111000':'n','10101000':'o',
+    '11110000':'p','11111000':'q','11101000':'r','01110000':'s','01111000':'t',
+    '10100100':'u','11100100':'v','01011100':'w','10110100':'x','10111100':'y','10101100':'z',
+    '10000010':'A','11000010':'B','10010010':'C','10011010':'D','10001010':'E',
+    '11010010':'F','11011010':'G','11001010':'H','01010010':'I','01011010':'J',
+    '10100010':'K','11100010':'L','10110010':'M','10111010':'N','10101010':'O',
+    '11110010':'P','11111010':'Q','11101010':'R','01110010':'S','01111010':'T',
+    '10100110':'U','11100110':'V','01011110':'W','10110110':'X','10111110':'Y','10101110':'Z',
+    '00000010':'#CAPSTOGGLE#',
+    '01111100':'#NÚMERO#',
+    '10000001':'1','11000001':'2','10010001':'3','10011001':'4','10001001':'5',
+    '11010001':'6','11011001':'7','11001001':'8','01010001':'9','01011001':'0',
+    '01000000':',','01001100':'.','01100000':';','01001000':':','01000100':'?','01101000':'!','00100100':'-',
+    '00111110':'$', '11001100':'#', '00011101':'+', '00100101':'=', '00101101':'*', '00110101':'/',
+    '00100001':'(', '00101001':')', '00001001':'@', '00000000':'',
+    '00010000':'#ACUTE#', '00110000':'#TILDE#', '10000100':'#CIRCUM#', '00001100':'#GRAVE#', '00100000':'#CEDILLA#',
+    '11011100':'[','11111100':']','10111110':'{','11110110':'}','01011110':'<','10101110':'>',
+    '00101111':'%','00101100':'|','01110100':'"','00010100':"'",'00011100':'\\','00101010':'*','01101010':'—',
+  };
+
+  function getPatternFromDots(activeDots) {
+    let pattern = '00000000';
+    const arr = pattern.split('');
+    activeDots.forEach(dot => {
+      if (dot >= 1 && dot <= 8) arr[dot-1] = '1';
+    });
+    return arr.join('');
+  }
+
+  const accentMap = {
+    '#ACUTE#': {'a':'á','e':'é','i':'í','o':'ó','u':'ú','A':'Á','E':'É','I':'Í','O':'Ó','U':'Ú'},
+    '#GRAVE#': {'a':'à','e':'è','i':'ì','o':'ò','u':'ù','A':'À','E':'È','I':'Ì','O':'Ò','U':'Ù'},
+    '#CIRCUM#': {'a':'â','e':'ê','i':'î','o':'ô','u':'û','A':'Â','E':'Ê','I':'Î','O':'Ô','U':'Û'},
+    '#TILDE#': {'a':'ã','o':'õ','n':'ñ','A':'Ã','O':'Õ','N':'Ñ'},
+    '#CEDILLA#': {'c':'ç','C':'Ç'}
+  };
+
+  const symbolNames = {
+    '#CAPSTOGGLE#': 'modo maiúsculas alternado', '#NÚMERO#': 'sinal de número',
+    '#ACUTE#': 'sinal de agudo', '#TILDE#': 'sinal de til', '#CIRCUM#': 'sinal de circunflexo',
+    '#GRAVE#': 'sinal de grave', '#CEDILLA#': 'sinal de cedilha',
+    '1': 'um', '2': 'dois', '9': 'nove', '0': 'zero',
+    ',': 'vírgula', '.': 'ponto final', ' ': 'espaço',
+    'á': 'á', 'ã': 'ã', 'ç': 'cê cedilha',
+    '[': 'abre colchete', ']': 'fecha colchete',
+    '{': 'abre chave', '}': 'fecha chave',
+    '<': 'menor que', '>': 'maior que',
+    '%': 'percentagem', '|': 'barra vertical',
+    '"': 'aspas', "'": 'apóstrofe',
+    '\\': 'barra invertida', '*': 'asterisco',
+    '—': 'travessão',
+  };
+
+  function getSymbolName(char) { return symbolNames[char] || char; }
+
+  window.braillePendingAccent = null;
+
+  const voiceToggle = document.getElementById('voiceToggle');
+  let portugueseVoice = null;
+
+  function findPortugueseVoice() {
+    const voices = speechSynthesis.getVoices();
+    portugueseVoice = voices.find(voice => voice.lang.startsWith('pt'));
+  }
+
+  speechSynthesis.onvoiceschanged = findPortugueseVoice;
+  if (speechSynthesis.getVoices().length > 0) findPortugueseVoice();
+
+  function speakText(text) {
+    if (!voiceToggle.checked || !speechSynthesis || !text?.trim()) return;
+    if (speechSynthesis.speaking) speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    if (portugueseVoice) utterance.voice = portugueseVoice;
+    utterance.lang = 'pt-PT';
+    utterance.rate = 1.1;
+    speechSynthesis.speak(utterance);
+  }
+
+  function speakLastWordAfterSpace() {
+    if (!voiceToggle.checked) return;
+    const fullText = editor.innerText?.trimEnd() || "";
+    if (!fullText) return;
+    const words = fullText.split(/\s+/);
+    const last = words[words.length - 1]?.trim();
+    if (last?.length > 0) speakText(last);
+  }
+
+  let chordBits = [0,0,0,0,0,0,0,0];
+
+  function chordPattern() { return chordBits.join(''); }
+
+  const editor = document.getElementById('editor');
+  const chordDisplay = document.getElementById('chordDisplay');
+  const status = document.getElementById('status');
+
+  function updateChordUI() {
+    const active = chordBits.map((b,i) => b ? (i+1) : '').filter(Boolean).join(',');
+    chordDisplay.textContent = active ? `Acorde: pontos ${active}` : 'Acorde: —';
+    for (let i = 1; i <= 8; i++) {
+      const btn = document.querySelector(`[data-dot="${i}"]`);
+      if (btn) btn.classList.toggle('active', chordBits[i-1] === 1);
+    }
+  }
+
+  function speakActiveDots() {
+    if (!voiceToggle.checked) return;
+    const activeDots = chordBits.map((b, i) => b ? (i + 1) : null).filter(n => n);
+    if (activeDots.length === 0) return speakText('Nenhum ponto ligado.');
+    let dotNames = activeDots.map(n => {
+      if (n <= 6) return ['um','dois','três','quatro','cinco','seis'][n-1];
+      if (n === 7) return 'sete'; if (n === 8) return 'oito';
+      return n;
+    });
+    let message = dotNames.length === 1
+      ? `Ponto ${dotNames[0]} ligado.`
+      : `Pontos ${dotNames.slice(0,-1).join(', ')} e ${dotNames[dotNames.length-1]} ligados.`;
+    speakText(message);
+  }
+
+  function toggleDot(n) {
+    if (n < 1 || n > 8) return;
+    chordBits[n-1] = chordBits[n-1] ? 0 : 1;
+    updateChordUI();
+    speakActiveDots();
+  }
+
+  function insertAtCursor(text) {
+    editor.focus();
+    const sel = window.getSelection();
+    let finalChar = text;
+
+    if (capsMode && text.length === 1 && text >= 'a' && text <= 'z') {
+      finalChar = text.toUpperCase();
+    }
+
+    if (window.braillePendingAccent && accentMap[window.braillePendingAccent]) {
+      const base = text;
+      const accent = accentMap[window.braillePendingAccent];
+      if (accent[base]) {
+        finalChar = accent[base];
+        window.braillePendingAccent = null;
+      } else {
+        window.braillePendingAccent = null;
+      }
+    }
+
+    if (!sel || !sel.rangeCount) {
+      editor.innerText += finalChar;
+    } else {
+      const range = sel.getRangeAt(0);
+      range.deleteContents();
+      const node = document.createTextNode(finalChar);
+      range.insertNode(node);
+      range.setStartAfter(node);
+      range.collapse(true);
+      sel.removeAllRanges();
+      sel.addRange(range);
+    }
+
+    speakText(getSymbolName(finalChar.trim()) || finalChar.trim());
+  }
+
+  function commitChord() {
+    const pat = chordPattern();
+    if (pat === '00000000') {
+      chordBits = [0,0,0,0,0,0,0,0];
+      updateChordUI();
+      return;
+    }
+
+    let ch = brailleMap8[pat];
+    if (!ch && chordBits[6] === 1) {
+      let tempBits = [...chordBits];
+      tempBits[6] = 0;
+      let basePat = tempBits.join('');
+      let baseChar = brailleMap8[basePat];
+      if (baseChar && baseChar.length === 1 && baseChar >= 'a' && baseChar <= 'z') {
+        ch = baseChar.toUpperCase();
+      }
+    }
+
+    if (!ch) ch = '?';
+
+    if (ch === '#CAPSTOGGLE#') {
+      capsMode = !capsMode;
+      status.textContent = capsMode ? 'MODO MAIÚSCULAS ATIVADO' : 'Modo maiúsculas desativado';
+      speakText(capsMode ? 'Modo maiúsculas ativado' : 'Modo maiúsculas desativado');
+    }
+    else if (ch.startsWith('#') && accentMap[ch]) {
+      window.braillePendingAccent = ch;
+      status.textContent = `Acento ${getSymbolName(ch)} ativo. Próximo carácter será acentuado.`;
+      speakText(getSymbolName(ch) + ' ativado para o próximo caractere.');
+    }
+    else if (ch === '#NÚMERO#') {
+      status.textContent = `Modo números ativado.`;
+      speakText('modo números ativado');
+    }
+    else {
+      insertAtCursor(ch);
+      status.textContent = `Inserido: "${ch}"`;
+    }
+
+    chordBits = [0,0,0,0,0,0,0,0];
+    updateChordUI();
+  }
+
+  const keyToDot = {'f':1,'d':2,'s':3,'j':4,'k':5,'l':6,'a':7,'z':8};
+
+  // Bloqueia digitação direta
+  editor.addEventListener('beforeinput', (e) => {
+    if (['insertText','insertCompositionText','insertFromPaste','insertFromDrop','insertReplacementText']
+        .includes(e.inputType)) {
+      e.preventDefault();
+    }
+  });
+
+  window.addEventListener('keydown', (ev) => {
+    const k = ev.key.toLowerCase();
+
+    if (k === 'g' || k === 'h') {
+      commitChord();
+      ev.preventDefault();
+      return;
+    }
+
+    if (keyToDot[k]) {
+      toggleDot(keyToDot[k]);
+      ev.preventDefault();
+      return;
+    }
+
+    if (ev.key === ' ') {
+      insertAtCursor(' ');
+      setTimeout(speakLastWordAfterSpace, 80);
+      ev.preventDefault();
+      return;
+    }
+
+    if (ev.key === 'Backspace') {
+      fastDelete(ev);
+      return;
+    }
+
+    if (ev.key === 'Enter') {
+      speakText('nova linha');
+      return;
+    }
+
+    if (!['f','d','s','j','k','l','a','z','g','h',' ','Backspace','Enter'].includes(k)) {
+      ev.preventDefault();
+      speakText("Tecla não permitida. Use apenas as teclas do Braille.");
+    }
+  });
+
+  // Apagar: fala a letra que está a ser apagada + só a última se apagar rápido + "nada para apagar" quando vazio
+  function fastDelete(ev) {
+    if (ev) ev.preventDefault();
+
+    const sel = window.getSelection();
+    if (!sel || !sel.rangeCount) {
+      speakText('nada para apagar');
+      return;
+    }
+
+    const range = sel.getRangeAt(0);
+    const currentText = editor.innerText || '';
+
+    // Verificação: editor vazio ou cursor no início sem texto
+    if (currentText.length === 0 ||
+        (range.collapsed && range.startOffset === 0 && range.startContainer === editor)) {
+      speakText('nada para apagar');
+      return;
+    }
+
+    let deletedChar = '';
+
+    // Captura o caractere que vai ser apagado (antes de apagar)
+    if (!range.collapsed) {
+      deletedChar = range.toString();
+    } else if (range.startOffset > 0) {
+      const node = range.startContainer;
+      const offset = range.startOffset;
+      if (node.nodeType === Node.TEXT_NODE && offset > 0) {
+        deletedChar = node.textContent.charAt(offset - 1) || '';
+      }
+    }
+
+    // Se não capturou ainda, pega o último caractere do texto inteiro (seguro para a última letra)
+    if (deletedChar === '' && currentText.length > 0) {
+      deletedChar = currentText.slice(-1);
+    }
+
+    // Apaga (só se havia algo)
+    if (deletedChar !== '') {
+      document.execCommand('delete', false, null);
+
+      lastDeletedChar = deletedChar;
+
+      // Debounce: fala a letra apagada (só a última se apagar rápido)
+      clearTimeout(deleteSpeakTimer);
+      deleteSpeakTimer = setTimeout(() => {
+        const spoken = getSymbolName(lastDeletedChar) || lastDeletedChar;
+        speakText(`apagado ${spoken}`);
+        status.textContent = `Apagado: "${spoken}"`;
+      }, 180);
+    } else {
+      speakText('nada para apagar');
+    }
+  }
+
+  editor.addEventListener('contextmenu', (ev) => {
+    ev.preventDefault();
+    fastDelete();
+  });
+
+  // Exportar (mantido igual, já estava bom)
+  function getFileTimestamp() {
+    const now = new Date();
+    const pad = n => String(n).padStart(2, '0');
+    return `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}_${pad(now.getHours())}-${pad(now.getMinutes())}-${pad(now.getSeconds())}`;
+  }
+
+  function exportToTXT() {
+    const content = editor.innerText.trim();
+    if (!content) {
+      status.textContent = 'Nada para exportar.';
+      speakText('Nada para exportar.');
+      return;
+    }
+    const ts = getFileTimestamp();
+    const filename = `EBA_WEB_${ts}.txt`;
+    const blob = new Blob([content], {type: 'text/plain;charset=utf-8'});
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    status.textContent = `TXT exportado: ${filename}`;
+    speakText('Texto exportado em TXT');
+  }
+
+  function exportToPDF() {
+    const text = editor.innerText.trim() || 'Documento Braille 8 Pontos Vazio';
+    const ts = getFileTimestamp();
+    const filename = `EBA_WEB_${ts}.pdf`;
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    doc.setFontSize(16);
+    doc.text('EBA-WEB: Texto Braille 8 Pontos', 15, 15);
+    doc.setFontSize(12);
+    doc.setFont('Courier', 'normal');
+    const split = doc.splitTextToSize(text, 180);
+    let y = 30;
+    split.forEach(line => {
+      if (y > 280) { doc.addPage(); y = 15; }
+      doc.text(line, 15, y);
+      y += 7;
+    });
+    doc.save(filename);
+    status.textContent = `PDF exportado: ${filename}`;
+    speakText('Documento exportado em PDF');
+  }
+
+  editor.addEventListener('click', (ev) => {
+    if (ev.button !== 0) return;
+    clickCount++;
+    if (clickCount === 1) {
+      clickTimer = setTimeout(() => {
+        exportToTXT();
+        clickCount = 0;
+      }, 280);
+    }
+    if (clickCount === 2) {
+      clearTimeout(clickTimer);
+      exportToPDF();
+      clickCount = 0;
+    }
+  });
+
+  // Eventos dos botões do visor — TODOS FUNCIONANDO
+  document.querySelectorAll('[data-dot]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const dot = parseInt(btn.dataset.dot, 10);
+      toggleDot(dot);
+      btn.focus(); // mantém foco visual
+    });
+  });
+
+  document.getElementById('enterBtn').addEventListener('click', () => {
+    commitChord();
+    document.getElementById('enterBtn').focus();
+  });
+
+  document.getElementById('spaceBtn').addEventListener('click', () => {
+    insertAtCursor(' ');
+    setTimeout(speakLastWordAfterSpace, 80);
+    document.getElementById('spaceBtn').focus();
+  });
+
+  document.getElementById('backBtn').addEventListener('click', () => {
+    fastDelete();
+    document.getElementById('backBtn').focus();
+  });
+
+  document.getElementById('clearChordBtn').addEventListener('click', () => {
+    chordBits = [0,0,0,0,0,0,0,0];
+    updateChordUI();
+    status.textContent = 'Acorde limpo.';
+    speakText('Acorde limpo.');
+    document.getElementById('clearChordBtn').focus();
+  });
+
+  // Inicialização
+  updateChordUI();
+  status.textContent = 'Editor pronto.';
+  speakText('Editor Braille pronto.');
+})();
+</script>
+</body>
+</html>
